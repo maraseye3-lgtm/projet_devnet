@@ -1,0 +1,26 @@
+# Use official Python image for AMD64
+FROM --platform=linux/amd64 python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set working directory
+WORKDIR /monitor
+
+# Install system dependencies including ping
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    iputils-ping \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy monitor script
+COPY . .
+
+# Start monitor script
+CMD ["python", "monitor.py"]

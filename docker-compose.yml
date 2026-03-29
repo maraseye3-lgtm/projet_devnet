@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres:15-alpine
+    platform: linux/amd64
+    container_name: netmon_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-netmon_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - netmon-network
+    restart: always
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.app
+    platform: linux/amd64
+    container_name: netmon_app
+    ports:
+      - "5000:5000"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-netmon_db}
+      DB_HOST: db
+    depends_on:
+      - db
+    networks:
+      - netmon-network
+    restart: always
+
+  monitor:
+    build:
+      context: ./monitor
+      dockerfile: Dockerfile.monitor
+    platform: linux/amd64
+    container_name: netmon_monitor
+    cap_add:
+      - NET_RAW
+    sysctls:
+      - net.ipv4.ping_group_range=0 2147483647
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-netmon_db}
+      DB_HOST: db
+    depends_on:
+      - db
+    networks:
+      - netmon-network
+    restart: always
+
+networks:
+  netmon-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

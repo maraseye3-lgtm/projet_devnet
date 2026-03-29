@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetMon - Monitoring Réseau Professionnel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1100px; margin: 0 auto; padding: 0 1.5rem;">
+            <div style="text-align: left;">
+                <h1>NetMon</h1>
+                <p>Solution de Surveillance Réseau Haute Disponibilité</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span style="font-size: 0.9rem; color: #94a3b8;">Bienvenue, <strong>{{ user.username }}</strong></span>
+                <a href="{{ url_for('logout') }}" style="background: rgba(239, 68, 68, 0.1); color: #f87171; padding: 0.5rem 1rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(239, 68, 68, 0.2); transition: all 0.2s;">Déconnexion</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section id="add-device">
+            <h2>Ajouter un nouvel équipement</h2>
+            <form id="device-form">
+                <input type="text" id="name" placeholder="Ex: Serveur Principal" required>
+                <input type="text" id="ip_address" placeholder="Adresse IP ou Nom de domaine" required>
+                <button type="submit">
+                    <svg style="width:20px;height:20px;margin-right:8px" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    Ajouter au monitoring
+                </button>
+            </form>
+        </section>
+
+        <section id="devices-list">
+            <h2>État des équipements en temps réel</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nom de l'équipement</th>
+                            <th>Cible Réseau</th>
+                            <th>Statut</th>
+                            <th>Latence</th>
+                            <th>Dernière vérification</th>
+                            <th>Gestion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="devices-body">
+                        <!-- Les équipements seront insérés ici dynamiquement -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        async function fetchDevices() {
+            try {
+                const response = await fetch('/api/devices');
+                const devices = await response.json();
+                const body = document.getElementById('devices-body');
+                body.innerHTML = '';
+                
+                devices.forEach(device => {
+                    const row = document.createElement('tr');
+                    const statusClass = device.status.toLowerCase();
+                    
+                    row.innerHTML = `
+                        <td style="font-weight: 600;">${device.name}</td>
+                        <td style="color: var(--text-muted);">${device.ip_address}</td>
+                        <td>
+                            <span class="status-badge ${statusClass}">
+                                ${device.status}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="latency-val" style="color: ${device.latency !== null ? (device.latency < 50 ? '#22c55e' : (device.latency < 150 ? '#f59e0b' : '#ef4444')) : 'var(--text-muted)'}">
+                                ${device.latency !== null ? device.latency.toFixed(2) + ' ms' : '--'}
+                            </span>
+                        </td>
+                        <td style="color: var(--text-muted); font-size: 0.85rem;">
+                            ${device.last_seen ? new Date(device.last_seen).toLocaleString('fr-FR') : 'Jamais'}
+                        </td>
+                        <td>
+                            <button class="delete-btn" onclick="deleteDevice(${device.id})" title="Supprimer">
+                                <svg style="width:18px;height:18px" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </td>
+                    `;
+                    body.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Erreur lors de la récupération des données:', error);
+            }
+        }
+
+        async function deleteDevice(id) {
+            if (confirm('Confirmer la suppression de cet équipement du monitoring ?')) {
+                await fetch(`/api/devices/${id}`, { method: 'DELETE' });
+                fetchDevices();
+            }
+        }
+
+        document.getElementById('device-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const ip_address = document.getElementById('ip_address').value;
+            
+            await fetch('/api/devices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, ip_address })
+            });
+            
+            document.getElementById('device-form').reset();
+            fetchDevices();
+        };
+
+        // Initialisation et rafraîchissement automatique
+        fetchDevices();
+        setInterval(fetchDevices, 10000);
+    </script>
+</body>
+</html>
