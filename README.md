@@ -51,6 +51,6 @@ Le projet inclut un pipeline GitHub Actions qui :
   - Vérification de la communication réseau via `docker logs netmon_monitor`.
 
 ---
-**Étudiant** : [Votre Nom]
+**Étudiant** : [Serigne Mouhamadou Moctar Seye]
 **Établissement** : ISI Keur Massar
 **Classe** : Licence 3 Réseaux et Informatique (L3 RI)
